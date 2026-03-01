@@ -17,9 +17,9 @@ public class MongoUserRepository : MongoRepository<User>, IUserRepository
         return await Collection.Find(filter).FirstOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<User>> GetByRoleAsync(UserRole role)
+    public async Task<IEnumerable<User>> GetByRoleAsync(Guid roleId)
     {
-        var filter = Builders<User>.Filter.Eq(u => u.Role, role);
+        var filter = Builders<User>.Filter.Eq(u => u.RoleId, roleId);
         return await Collection.Find(filter).ToListAsync();
     }
 

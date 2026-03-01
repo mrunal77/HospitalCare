@@ -18,7 +18,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetAll()
     {
         var appointments = await _appointmentService.GetAllAsync();
@@ -26,7 +26,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<AppointmentDto>> GetById(Guid id)
     {
         var appointment = await _appointmentService.GetByIdAsync(id);
@@ -34,7 +34,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet("patient/{patientId:guid}")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetByPatientId(Guid patientId)
     {
         var appointments = await _appointmentService.GetByPatientIdAsync(patientId);
@@ -42,7 +42,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet("doctor/{doctorId:guid}")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "DoctorAccess")]
     public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetByDoctorId(Guid doctorId)
     {
         var appointments = await _appointmentService.GetByDoctorIdAsync(doctorId);
@@ -50,7 +50,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "HospitalEmployee,Admin")]
+    [Authorize(Policy = "EmployeeAccess")]
     public async Task<ActionResult<AppointmentDto>> Create([FromBody] CreateAppointmentDto dto)
     {
         var appointment = await _appointmentService.CreateAsync(dto);
@@ -58,7 +58,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id:guid}/cancel")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult> Cancel(Guid id, [FromQuery] string? reason = null)
     {
         var result = await _appointmentService.CancelAsync(id, reason);
@@ -66,7 +66,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id:guid}/complete")]
-    [Authorize(Roles = "Doctor,Admin")]
+    [Authorize(Policy = "DoctorAccess")]
     public async Task<ActionResult> Complete(Guid id, [FromQuery] string? notes = null)
     {
         var result = await _appointmentService.CompleteAsync(id, notes);
@@ -74,7 +74,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id:guid}/reschedule")]
-    [Authorize(Roles = "HospitalEmployee,Admin")]
+    [Authorize(Policy = "EmployeeAccess")]
     public async Task<ActionResult<AppointmentDto>> Reschedule(Guid id, [FromBody] RescheduleAppointmentDto dto)
     {
         var appointment = await _appointmentService.RescheduleAsync(id, dto);

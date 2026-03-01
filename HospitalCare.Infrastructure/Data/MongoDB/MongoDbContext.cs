@@ -21,4 +21,5 @@ public class MongoDbContext
     public IMongoCollection<Domain.Entities.Doctor> Doctors => GetCollection<Domain.Entities.Doctor>("doctors");
     public IMongoCollection<Domain.Entities.Appointment> Appointments => GetCollection<Domain.Entities.Appointment>("appointments");
     public IMongoCollection<Domain.Entities.User> Users => GetCollection<Domain.Entities.User>("users");
+    public IMongoCollection<Domain.Entities.Role> Roles => GetCollection<Domain.Entities.Role>("roles");
 }

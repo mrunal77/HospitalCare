@@ -59,7 +59,13 @@ try
         };
     });
 
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("FullAccess", policy => policy.RequireRole("Admin"));
+        options.AddPolicy("DoctorAccess", policy => policy.RequireRole("Doctor", "Admin"));
+        options.AddPolicy("EmployeeAccess", policy => policy.RequireRole("HospitalEmployee", "Admin"));
+        options.AddPolicy("PatientAccess", policy => policy.RequireRole("Doctor", "HospitalEmployee", "Admin"));
+    });
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
@@ -77,7 +83,13 @@ try
     app.MapScalarApiReference();
 
     app.UseCors("AllowReactApp");
-    app.UseHttpsRedirection();
+    
+    // Only use HTTPS redirection in production
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
+    
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

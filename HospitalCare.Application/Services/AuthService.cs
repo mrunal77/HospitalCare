@@ -9,11 +9,13 @@ namespace HospitalCare.Application.Services;
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IJwtService _jwtService;
 
-    public AuthService(IUserRepository userRepository, IJwtService jwtService)
+    public AuthService(IUserRepository userRepository, IRoleRepository roleRepository, IJwtService jwtService)
     {
         _userRepository = userRepository;
+        _roleRepository = roleRepository;
         _jwtService = jwtService;
     }
 
@@ -27,7 +29,8 @@ public class AuthService : IAuthService
         if (!VerifyPassword(dto.Password, user.PasswordHash))
             return null;
 
-        return GenerateAuthResponse(user);
+        var role = await _roleRepository.GetByIdAsync(user.RoleId);
+        return GenerateAuthResponse(user, role?.Name ?? "Unknown");
     }
 
     public async Task<AuthResponseDto?> RegisterAsync(RegisterUserDto dto)
@@ -35,14 +38,15 @@ public class AuthService : IAuthService
         if (await _userRepository.EmailExistsAsync(dto.Email))
             return null;
 
-        if (!Enum.TryParse<UserRole>(dto.Role, out var role))
-            role = UserRole.HospitalEmployee;
+        var role = await _roleRepository.GetByNameAsync(dto.Role);
+        var roleId = role?.Id ?? (await _roleRepository.GetByNameAsync("HospitalEmployee"))?.Id 
+            ?? throw new InvalidOperationException("Default role not found");
 
         var passwordHash = HashPassword(dto.Password);
-        var user = new User(dto.Email, passwordHash, dto.FirstName, dto.LastName, role);
+        var user = new User(dto.Email, passwordHash, dto.FirstName, dto.LastName, roleId);
 
         var createdUser = await _userRepository.AddAsync(user);
-        return GenerateAuthResponse(createdUser);
+        return GenerateAuthResponse(createdUser, role?.Name ?? "HospitalEmployee");
     }
 
     public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordDto dto)
@@ -67,15 +71,30 @@ public class AuthService : IAuthService
     public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
     {
         var users = await _userRepository.GetAllAsync();
-        return users.Select(u => new UserDto(
-            u.Id,
-            u.Email,
-            u.FirstName,
-            u.LastName,
-            u.Role.ToString(),
-            u.IsActive,
-            u.CreatedAt
-        ));
+        var roleDtos = new Dictionary<Guid, RoleDto>();
+        
+        var result = new List<UserDto>();
+        foreach (var u in users)
+        {
+            if (!roleDtos.TryGetValue(u.RoleId, out var roleDto))
+            {
+                var role = await _roleRepository.GetByIdAsync(u.RoleId);
+                roleDto = role is null ? null : new RoleDto(role.Id, role.Name, role.Description, role.Permission, role.IsActive, role.CreatedAt);
+                if (roleDto is not null)
+                    roleDtos[u.RoleId] = roleDto;
+            }
+            
+            result.Add(new UserDto(
+                u.Id,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                roleDto?.Name ?? "Unknown",
+                u.IsActive,
+                u.CreatedAt
+            ));
+        }
+        return result;
     }
 
     public async Task<bool> ResetUserPasswordAsync(Guid userId, string newPassword)
@@ -89,15 +108,15 @@ public class AuthService : IAuthService
         return true;
     }
 
-    private AuthResponseDto GenerateAuthResponse(User user)
+    private AuthResponseDto GenerateAuthResponse(User user, string roleName)
     {
-        var token = _jwtService.GenerateToken(user.Id, user.Email, user.FirstName, user.LastName, user.Role.ToString());
+        var token = _jwtService.GenerateToken(user.Id, user.Email, user.FirstName, user.LastName, roleName);
         return new AuthResponseDto(
             token,
             user.Email,
             user.FirstName,
             user.LastName,
-            user.Role.ToString(),
+            roleName,
             _jwtService.GetTokenExpiration()
         );
     }

@@ -18,7 +18,7 @@ public class DoctorsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<IEnumerable<DoctorDto>>> GetAll()
     {
         var doctors = await _doctorService.GetAllAsync();
@@ -26,7 +26,7 @@ public class DoctorsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<DoctorDto>> GetById(Guid id)
     {
         var doctor = await _doctorService.GetByIdAsync(id);
@@ -34,7 +34,7 @@ public class DoctorsController : ControllerBase
     }
 
     [HttpGet("specialization/{specialization}")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<IEnumerable<DoctorDto>>> GetBySpecialization(string specialization)
     {
         var doctors = await _doctorService.GetBySpecializationAsync(specialization);
@@ -42,7 +42,7 @@ public class DoctorsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "FullAccess")]
     public async Task<ActionResult<DoctorDto>> Create([FromBody] CreateDoctorDto dto)
     {
         var doctor = await _doctorService.CreateAsync(dto);
@@ -50,7 +50,7 @@ public class DoctorsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "FullAccess")]
     public async Task<ActionResult> Delete(Guid id)
     {
         var result = await _doctorService.DeleteAsync(id);

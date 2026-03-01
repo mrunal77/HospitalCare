@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IDoctorRepository, MongoDoctorRepository>();
         services.AddScoped<IAppointmentRepository, MongoAppointmentRepository>();
         services.AddScoped<IUserRepository, MongoUserRepository>();
+        services.AddScoped<IRoleRepository, MongoRoleRepository>();
         services.AddScoped<IJwtService, JwtService>();
 
         return services;
@@ -100,6 +101,24 @@ public static class DependencyInjection
                 new CreateIndexModel<Domain.Entities.User>(
                     Builders<Domain.Entities.User>.IndexKeys.Ascending(u => u.Email),
                     new CreateIndexOptions { Unique = true, Sparse = true, Name = "idx_user_email" }
+                )
+            );
+            await context.Users.Indexes.CreateOneAsync(
+                new CreateIndexModel<Domain.Entities.User>(
+                    Builders<Domain.Entities.User>.IndexKeys.Ascending(u => u.RoleId),
+                    new CreateIndexOptions { Name = "idx_user_role" }
+                )
+            );
+        }
+        catch (MongoCommandException) { }
+
+        try
+        {
+            await context.Roles.Indexes.DropAllAsync();
+            await context.Roles.Indexes.CreateOneAsync(
+                new CreateIndexModel<Domain.Entities.Role>(
+                    Builders<Domain.Entities.Role>.IndexKeys.Ascending(r => r.Name),
+                    new CreateIndexOptions { Unique = true, Sparse = true, Name = "idx_role_name" }
                 )
             );
         }

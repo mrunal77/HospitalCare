@@ -1,5 +1,6 @@
 using HospitalCare.Domain.Entities;
 using HospitalCare.Infrastructure.Data.MongoDB;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,40 +11,116 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(MongoDbContext context)
     {
-        await SeedAdminUserAsync(context);
+        await SeedRolesAsync(context);
+        await MigrateUsersAsync(context);
         await SeedSampleDataAsync(context);
     }
 
-    private static async Task SeedAdminUserAsync(MongoDbContext context)
+    private static async Task SeedRolesAsync(MongoDbContext context)
     {
-        var existingAdmin = await context.Users
-            .Find(u => u.Email == "admin@hospitalcare.com")
-            .FirstOrDefaultAsync();
+        var roleCount = await context.Roles.CountDocumentsAsync(_ => true);
+        if (roleCount == 0)
+        {
+            var roles = new List<Role>
+            {
+                new("Admin", "System administrator with full access", "FullAccess"),
+                new("Doctor", "Medical doctor with patient access", "DoctorAccess"),
+                new("HospitalEmployee", "Hospital staff with limited access", "EmployeeAccess"),
+                new("Nurse", "Nursing staff with patient care access", "NurseAccess"),
+                new("Receptionist", "Front desk staff with appointment access", "ReceptionAccess")
+            };
 
+            try
+            {
+                await context.Roles.InsertManyAsync(roles);
+                Console.WriteLine($"Seeded {roles.Count} default roles");
+                foreach (var role in roles)
+                {
+                    Console.WriteLine($"  - {role.Name}: {role.Id}");
+                }
+            }
+            catch (MongoBulkWriteException) { }
+        }
+    }
+
+    private static async Task MigrateUsersAsync(MongoDbContext context)
+    {
+        var adminRole = await context.Roles.Find(r => r.Name == "Admin").FirstOrDefaultAsync();
+        var employeeRole = await context.Roles.Find(r => r.Name == "HospitalEmployee").FirstOrDefaultAsync();
+
+        if (adminRole is null || employeeRole is null) return;
+
+        var usersCollection = context.GetCollection<BsonDocument>("users");
+        
+        var existingAdmin = await usersCollection.Find(new BsonDocument("email", "admin@hospitalcare.com")).FirstOrDefaultAsync();
+        
         if (existingAdmin is null)
         {
-            var adminUser = new User(
-                "admin@hospitalcare.com",
-                HashPassword("Admin@123"),
-                "System",
-                "Administrator",
-                UserRole.Admin
-            );
-            await context.Users.InsertOneAsync(adminUser);
+            var adminDoc = new BsonDocument
+            {
+                { "_id", new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard) },
+                { "email", "admin@hospitalcare.com" },
+                { "passwordHash", HashPassword("Admin@123") },
+                { "firstName", "System" },
+                { "lastName", "Administrator" },
+                { "roleId", new BsonBinaryData(adminRole.Id, GuidRepresentation.Standard) },
+                { "isActive", true },
+                { "createdAt", DateTime.UtcNow },
+                { "updatedAt", DateTime.UtcNow }
+            };
+            await usersCollection.InsertOneAsync(adminDoc);
             Console.WriteLine("Admin user created: admin@hospitalcare.com / Admin@123");
         }
         else
         {
-            var passwordHash = HashPassword("Admin@123");
-            var update = Builders<User>.Update
-                .Set(u => u.PasswordHash, passwordHash)
-                .Set(u => u.FirstName, "System")
-                .Set(u => u.LastName, "Administrator")
-                .Set(u => u.Role, UserRole.Admin)
-                .Set(u => u.IsActive, true);
-
-            await context.Users.UpdateOneAsync(u => u.Email == "admin@hospitalcare.com", update);
+            var update = new BsonDocument
+            {
+                { "$set", new BsonDocument
+                    {
+                        { "passwordHash", HashPassword("Admin@123") },
+                        { "firstName", "System" },
+                        { "lastName", "Administrator" },
+                        { "roleId", new BsonBinaryData(adminRole.Id, GuidRepresentation.Standard) },
+                        { "isActive", true },
+                        { "updatedAt", DateTime.UtcNow }
+                    }
+                }
+            };
+            await usersCollection.UpdateOneAsync(new BsonDocument("email", "admin@hospitalcare.com"), update);
             Console.WriteLine("Admin user reset: admin@hospitalcare.com / Admin@123");
+        }
+
+        var existingEmployee = await usersCollection.Find(new BsonDocument("email", "reception@hospitalcare.com")).FirstOrDefaultAsync();
+        
+        if (existingEmployee is null && employeeRole is not null)
+        {
+            var employeeDoc = new BsonDocument
+            {
+                { "_id", new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard) },
+                { "email", "reception@hospitalcare.com" },
+                { "passwordHash", HashPassword("Employee@123") },
+                { "firstName", "Jane" },
+                { "lastName", "Reception" },
+                { "roleId", new BsonBinaryData(employeeRole.Id, GuidRepresentation.Standard) },
+                { "isActive", true },
+                { "createdAt", DateTime.UtcNow },
+                { "updatedAt", DateTime.UtcNow }
+            };
+            await usersCollection.InsertOneAsync(employeeDoc);
+            Console.WriteLine("Employee user created: reception@hospitalcare.com / Employee@123");
+        }
+        else if (existingEmployee is not null && employeeRole is not null)
+        {
+            var update = new BsonDocument
+            {
+                { "$set", new BsonDocument
+                    {
+                        { "roleId", new BsonBinaryData(employeeRole.Id, GuidRepresentation.Standard) },
+                        { "updatedAt", DateTime.UtcNow }
+                    }
+                }
+            };
+            await usersCollection.UpdateOneAsync(new BsonDocument("email", "reception@hospitalcare.com"), update);
         }
     }
 
@@ -85,23 +162,6 @@ public static class DatabaseSeeder
             {
                 await context.Patients.InsertManyAsync(patients);
                 Console.WriteLine($"Seeded {patients.Count} sample patients");
-            }
-            catch (MongoBulkWriteException) { }
-        }
-
-        var employeeCount = await context.Users.CountDocumentsAsync(u => u.Role == UserRole.HospitalEmployee);
-        if (employeeCount == 0)
-        {
-            var employees = new List<User>
-            {
-                new("reception@hospitalcare.com", HashPassword("Employee@123"), "Jane", "Reception", UserRole.HospitalEmployee),
-                new("nurse@hospitalcare.com", HashPassword("Employee@123"), "Mark", "Nurse", UserRole.HospitalEmployee)
-            };
-
-            try
-            {
-                await context.Users.InsertManyAsync(employees);
-                Console.WriteLine($"Seeded {employees.Count} sample employees");
             }
             catch (MongoBulkWriteException) { }
         }

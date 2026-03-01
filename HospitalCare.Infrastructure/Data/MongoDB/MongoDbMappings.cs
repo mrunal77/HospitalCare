@@ -83,6 +83,18 @@ public static class MongoDbMappings
                 });
             }
 
+            if (!BsonClassMap.IsClassMapRegistered(typeof(Role)))
+            {
+                BsonClassMap.RegisterClassMap<Role>(cm =>
+                {
+                    cm.AutoMap();
+                    cm.MapProperty(r => r.Name).SetElementName("name");
+                    cm.MapProperty(r => r.Description).SetElementName("description");
+                    cm.MapProperty(r => r.Permission).SetElementName("permission");
+                    cm.MapProperty(r => r.IsActive).SetElementName("isActive");
+                });
+            }
+
             if (!BsonClassMap.IsClassMapRegistered(typeof(User)))
             {
                 BsonClassMap.RegisterClassMap<User>(cm =>
@@ -92,8 +104,11 @@ public static class MongoDbMappings
                     cm.MapProperty(u => u.PasswordHash).SetElementName("passwordHash");
                     cm.MapProperty(u => u.FirstName).SetElementName("firstName");
                     cm.MapProperty(u => u.LastName).SetElementName("lastName");
-                    cm.MapProperty(u => u.Role).SetElementName("role");
+                    cm.MapProperty(u => u.RoleId)
+                        .SetElementName("roleId")
+                        .SetSerializer(new GuidSerializer(GuidRepresentation.Standard));
                     cm.MapProperty(u => u.IsActive).SetElementName("isActive");
+                    cm.SetIgnoreExtraElements(true);
                 });
             }
 

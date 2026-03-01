@@ -18,7 +18,7 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<IEnumerable<PatientDto>>> GetAll()
     {
         var patients = await _patientService.GetAllAsync();
@@ -26,7 +26,7 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<PatientDto>> GetById(Guid id)
     {
         var patient = await _patientService.GetByIdAsync(id);
@@ -34,7 +34,7 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet("search")]
-    [Authorize(Roles = "Doctor,HospitalEmployee,Admin")]
+    [Authorize(Policy = "PatientAccess")]
     public async Task<ActionResult<IEnumerable<PatientDto>>> Search([FromQuery] string name)
     {
         var patients = await _patientService.SearchByNameAsync(name);
@@ -42,7 +42,7 @@ public class PatientsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "HospitalEmployee,Admin")]
+    [Authorize(Policy = "EmployeeAccess")]
     public async Task<ActionResult<PatientDto>> Create([FromBody] CreatePatientDto dto)
     {
         var patient = await _patientService.CreateAsync(dto);
@@ -50,7 +50,7 @@ public class PatientsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "HospitalEmployee,Admin")]
+    [Authorize(Policy = "EmployeeAccess")]
     public async Task<ActionResult<PatientDto>> Update(Guid id, [FromBody] UpdatePatientDto dto)
     {
         var patient = await _patientService.UpdateAsync(id, dto);
@@ -58,7 +58,7 @@ public class PatientsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "FullAccess")]
     public async Task<ActionResult> Delete(Guid id)
     {
         var result = await _patientService.DeleteAsync(id);
