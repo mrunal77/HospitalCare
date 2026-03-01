@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="HospitalCare.Api/HospitalCare.Api.csproj" />
+  <Project Path="HospitalCare.Application/HospitalCare.Application.csproj" />
+  <Project Path="HospitalCare.Domain/HospitalCare.Domain.csproj" />
+  <Project Path="HospitalCare.Infrastructure/HospitalCare.Infrastructure.csproj" />
+  <Project Path="HospitalCare.Migrations/HospitalCare.Migrations.csproj" />
+</Solution>
