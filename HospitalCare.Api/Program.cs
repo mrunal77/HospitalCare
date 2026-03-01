@@ -1,4 +1,6 @@
 using System.Text;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using HospitalCare.Api.Middleware;
 using HospitalCare.Application;
 using HospitalCare.Infrastructure;
@@ -15,6 +17,31 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Host.UseSerilogLogging(mongoConnectionString, mongoDatabaseName);
+
+    var environment = builder.Environment.EnvironmentName;
+
+    if (environment == "Production" || environment == "UAT")
+    {
+        var keyVaultUri = builder.Configuration["KeyVault:VaultUri"];
+        var tenantId = builder.Configuration["KeyVault:TenantId"];
+        var clientId = builder.Configuration["KeyVault:ClientId"];
+        var clientSecret = builder.Configuration["KeyVault:ClientSecret"];
+
+        if (!string.IsNullOrEmpty(keyVaultUri) && !string.IsNullOrEmpty(tenantId) && 
+            !string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(clientSecret))
+        {
+            var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+            var secretClient = new SecretClient(new Uri(keyVaultUri), credential);
+
+            var mongoConnSecret = await secretClient.GetSecretAsync("MongoDB-ConnectionString");
+            var redisConnSecret = await secretClient.GetSecretAsync("Redis-ConnectionString");
+            var jwtSecretSecret = await secretClient.GetSecretAsync("Jwt-SecretKey");
+
+            builder.Configuration["MongoDB:ConnectionString"] = mongoConnSecret.Value.Value;
+            builder.Configuration["Redis:ConnectionString"] = redisConnSecret.Value.Value;
+            builder.Configuration["Jwt:SecretKey"] = jwtSecretSecret.Value.Value;
+        }
+    }
 
     builder.Services.AddCors(options =>
     {
@@ -89,7 +116,6 @@ try
 
     app.UseCors("AllowReactApp");
     
-    // Only use HTTPS redirection in production
     if (!app.Environment.IsDevelopment())
     {
         app.UseHttpsRedirection();
