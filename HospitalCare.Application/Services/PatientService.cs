@@ -1,3 +1,4 @@
+using AutoMapper;
 using HospitalCare.Application.DTOs;
 using HospitalCare.Application.Interfaces.Services;
 using HospitalCare.Domain.Entities;
@@ -8,22 +9,24 @@ namespace HospitalCare.Application.Services;
 public class PatientService : IPatientService
 {
     private readonly IPatientRepository _patientRepository;
+    private readonly IMapper _mapper;
 
-    public PatientService(IPatientRepository patientRepository)
+    public PatientService(IPatientRepository patientRepository, IMapper mapper)
     {
         _patientRepository = patientRepository;
+        _mapper = mapper;
     }
 
     public async Task<PatientDto?> GetByIdAsync(Guid id)
     {
         var patient = await _patientRepository.GetByIdAsync(id);
-        return patient is null ? null : MapToDto(patient);
+        return patient is null ? null : _mapper.Map<PatientDto>(patient);
     }
 
     public async Task<IEnumerable<PatientDto>> GetAllAsync()
     {
         var patients = await _patientRepository.GetAllAsync();
-        return patients.Select(MapToDto);
+        return _mapper.Map<IEnumerable<PatientDto>>(patients);
     }
 
     public async Task<PatientDto> CreateAsync(CreatePatientDto dto)
@@ -38,7 +41,7 @@ public class PatientService : IPatientService
         );
 
         var created = await _patientRepository.AddAsync(patient);
-        return MapToDto(created);
+        return _mapper.Map<PatientDto>(created);
     }
 
     public async Task<PatientDto?> UpdateAsync(Guid id, UpdatePatientDto dto)
@@ -48,7 +51,7 @@ public class PatientService : IPatientService
 
         patient.UpdateContactInfo(dto.Email, dto.Phone, dto.Address);
         await _patientRepository.UpdateAsync(patient);
-        return MapToDto(patient);
+        return _mapper.Map<PatientDto>(patient);
     }
 
     public async Task<bool> DeleteAsync(Guid id)
@@ -63,16 +66,6 @@ public class PatientService : IPatientService
     public async Task<IEnumerable<PatientDto>> SearchByNameAsync(string name)
     {
         var patients = await _patientRepository.SearchByNameAsync(name);
-        return patients.Select(MapToDto);
+        return _mapper.Map<IEnumerable<PatientDto>>(patients);
     }
-
-    private static PatientDto MapToDto(Patient patient) => new(
-        patient.Id,
-        patient.FirstName,
-        patient.LastName,
-        patient.DateOfBirth,
-        patient.Email,
-        patient.Phone,
-        patient.Address
-    );
 }

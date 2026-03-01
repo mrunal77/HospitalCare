@@ -1,3 +1,4 @@
+using AutoMapper;
 using HospitalCare.Application.DTOs;
 using HospitalCare.Application.Interfaces.Services;
 using HospitalCare.Domain.Entities;
@@ -8,22 +9,24 @@ namespace HospitalCare.Application.Services;
 public class RoleService : IRoleService
 {
     private readonly IRoleRepository _roleRepository;
+    private readonly IMapper _mapper;
 
-    public RoleService(IRoleRepository roleRepository)
+    public RoleService(IRoleRepository roleRepository, IMapper mapper)
     {
         _roleRepository = roleRepository;
+        _mapper = mapper;
     }
 
     public async Task<IEnumerable<RoleDto>> GetAllAsync()
     {
         var roles = await _roleRepository.GetAllAsync();
-        return roles.Select(MapToDto);
+        return _mapper.Map<IEnumerable<RoleDto>>(roles);
     }
 
     public async Task<RoleDto?> GetByIdAsync(Guid id)
     {
         var role = await _roleRepository.GetByIdAsync(id);
-        return role is null ? null : MapToDto(role);
+        return role is null ? null : _mapper.Map<RoleDto>(role);
     }
 
     public async Task<RoleDto> CreateAsync(CreateRoleDto dto)
@@ -36,7 +39,7 @@ public class RoleService : IRoleService
 
         var role = new Role(dto.Name, dto.Description, dto.Permission);
         var created = await _roleRepository.AddAsync(role);
-        return MapToDto(created);
+        return _mapper.Map<RoleDto>(created);
     }
 
     public async Task<RoleDto> UpdateAsync(Guid id, UpdateRoleDto dto)
@@ -55,7 +58,7 @@ public class RoleService : IRoleService
 
         role.Update(dto.Name, dto.Description, dto.Permission);
         await _roleRepository.UpdateAsync(role);
-        return MapToDto(role);
+        return _mapper.Map<RoleDto>(role);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -79,7 +82,7 @@ public class RoleService : IRoleService
 
         role.Activate();
         await _roleRepository.UpdateAsync(role);
-        return MapToDto(role);
+        return _mapper.Map<RoleDto>(role);
     }
 
     public async Task<RoleDto> DeactivateAsync(Guid id)
@@ -92,15 +95,6 @@ public class RoleService : IRoleService
 
         role.Deactivate();
         await _roleRepository.UpdateAsync(role);
-        return MapToDto(role);
+        return _mapper.Map<RoleDto>(role);
     }
-
-    private static RoleDto MapToDto(Role role) => new(
-        role.Id,
-        role.Name,
-        role.Description,
-        role.Permission,
-        role.IsActive,
-        role.CreatedAt
-    );
 }

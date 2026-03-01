@@ -1,3 +1,4 @@
+using AutoMapper;
 using HospitalCare.Application.DTOs;
 using HospitalCare.Application.Interfaces.Services;
 using HospitalCare.Domain.Entities;
@@ -8,22 +9,24 @@ namespace HospitalCare.Application.Services;
 public class DoctorService : IDoctorService
 {
     private readonly IDoctorRepository _doctorRepository;
+    private readonly IMapper _mapper;
 
-    public DoctorService(IDoctorRepository doctorRepository)
+    public DoctorService(IDoctorRepository doctorRepository, IMapper mapper)
     {
         _doctorRepository = doctorRepository;
+        _mapper = mapper;
     }
 
     public async Task<DoctorDto?> GetByIdAsync(Guid id)
     {
         var doctor = await _doctorRepository.GetByIdAsync(id);
-        return doctor is null ? null : MapToDto(doctor);
+        return doctor is null ? null : _mapper.Map<DoctorDto>(doctor);
     }
 
     public async Task<IEnumerable<DoctorDto>> GetAllAsync()
     {
         var doctors = await _doctorRepository.GetAllAsync();
-        return doctors.Select(MapToDto);
+        return _mapper.Map<IEnumerable<DoctorDto>>(doctors);
     }
 
     public async Task<DoctorDto> CreateAsync(CreateDoctorDto dto)
@@ -38,7 +41,7 @@ public class DoctorService : IDoctorService
         );
 
         var created = await _doctorRepository.AddAsync(doctor);
-        return MapToDto(created);
+        return _mapper.Map<DoctorDto>(created);
     }
 
     public async Task<bool> DeleteAsync(Guid id)
@@ -53,16 +56,6 @@ public class DoctorService : IDoctorService
     public async Task<IEnumerable<DoctorDto>> GetBySpecializationAsync(string specialization)
     {
         var doctors = await _doctorRepository.GetBySpecializationAsync(specialization);
-        return doctors.Select(MapToDto);
+        return _mapper.Map<IEnumerable<DoctorDto>>(doctors);
     }
-
-    private static DoctorDto MapToDto(Doctor doctor) => new(
-        doctor.Id,
-        doctor.FirstName,
-        doctor.LastName,
-        doctor.Specialization,
-        doctor.Email,
-        doctor.Phone,
-        doctor.LicenseNumber
-    );
 }

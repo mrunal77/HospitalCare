@@ -1,3 +1,4 @@
+using AutoMapper;
 using FluentValidation;
 using HospitalCare.Application.Interfaces.Services;
 using HospitalCare.Application.Services;
@@ -18,6 +19,8 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssemblyContaining<UpdateProfileValidator>();
         services.AddScoped<IValidationService, ValidationService>();
+
+        services.AddAutoMapper(typeof(DependencyInjection).Assembly);
 
         return services;
     }
