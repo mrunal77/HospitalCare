@@ -7,6 +7,7 @@ using HospitalCare.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using StackExchange.Redis;
 
 namespace HospitalCare.Infrastructure;
 
@@ -19,9 +20,16 @@ public static class DependencyInjection
             ?? "mongodb://localhost:27017";
         var mongoDatabaseName = configuration["MongoDB:DatabaseName"] ?? "HospitalCareDb";
 
+        var redisConnectionString = configuration.GetConnectionString("Redis")
+            ?? configuration["Redis:ConnectionString"]
+            ?? "localhost:6379";
+
         MongoDbMappings.RegisterMappings();
 
         services.AddSingleton<MongoDbContext>(sp => new MongoDbContext(mongoConnectionString, mongoDatabaseName));
+
+        services.AddSingleton<IConnectionMultiplexer>(sp => 
+            ConnectionMultiplexer.Connect(redisConnectionString));
 
         services.AddScoped<IPatientRepository, MongoPatientRepository>();
         services.AddScoped<IDoctorRepository, MongoDoctorRepository>();

@@ -22,9 +22,14 @@ try
         {
             policy.WithOrigins(
                     "http://localhost:3000",
+                    "http://localhost:3001",
+                    "https://localhost:3000",
+                    "https://localhost:3001",
                     "http://localhost:4200",
                     "http://127.0.0.1:3000",
-                    "http://192.168.31.248:3000"
+                    "https://127.0.0.1:3000",
+                    "http://192.168.31.248:3000",
+                    "https://192.168.31.248:3000"
                 )
                 .AllowAnyHeader()
                 .AllowAnyMethod()
