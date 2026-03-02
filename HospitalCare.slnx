@@ -4,4 +4,5 @@
   <Project Path="HospitalCare.Domain/HospitalCare.Domain.csproj" />
   <Project Path="HospitalCare.Infrastructure/HospitalCare.Infrastructure.csproj" />
   <Project Path="HospitalCare.Migrations/HospitalCare.Migrations.csproj" />
+  <Project Path="HospitalCare.Tests/HospitalCare.Tests.csproj" />
 </Solution>
