@@ -44,21 +44,32 @@ public class AuthService : IAuthService
             .Build();
     }
 
-    public async Task<AuthResponseDto?> LoginAsync(LoginDto dto)
+    public async Task<(AuthResponseDto? Response, bool IsInactive)> LoginAsync(LoginDto dto)
     {
-        return await _loginRetryPipeline.ExecuteAsync(async token =>
+        try
         {
             var user = await _userRepository.GetByEmailAsync(dto.Email);
             
-            if (user is null || !user.IsActive)
-                return null;
+            if (user is null)
+                return (null, false);
+
+            if (!user.IsActive)
+                return (null, true);
 
             if (!VerifyPassword(dto.Password, user.PasswordHash))
-                return null;
+                return (null, false);
 
             var role = await _roleRepository.GetByIdAsync(user.RoleId);
-            return GenerateAuthResponse(user, role?.Name ?? "Unknown");
-        });
+            return (GenerateAuthResponse(user, role?.Name ?? "Unknown"), false);
+        }
+        catch (MongoDB.Driver.MongoConnectionException)
+        {
+            throw;
+        }
+        catch (MongoDB.Driver.MongoCommandException)
+        {
+            throw;
+        }
     }
 
     public async Task<AuthResponseDto?> RegisterAsync(RegisterUserDto dto)

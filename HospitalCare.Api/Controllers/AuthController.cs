@@ -20,7 +20,11 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto)
     {
-        var result = await _authService.LoginAsync(dto);
+        var (result, isInactive) = await _authService.LoginAsync(dto);
+        
+        if (isInactive)
+            return Unauthorized(new { message = "Your account has been deactivated. Please contact Administrator." });
+
         if (result is null)
             return Unauthorized(new { message = "Invalid email or password" });
 
