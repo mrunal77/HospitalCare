@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using AutoMapper;
 using HospitalCare.Application.DTOs;
 using HospitalCare.Application.Interfaces.Services;
@@ -9,11 +10,19 @@ namespace HospitalCare.Application.Services;
 public class DoctorService : IDoctorService
 {
     private readonly IDoctorRepository _doctorRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IMapper _mapper;
 
-    public DoctorService(IDoctorRepository doctorRepository, IMapper mapper)
+    public DoctorService(
+        IDoctorRepository doctorRepository,
+        IUserRepository userRepository,
+        IRoleRepository roleRepository,
+        IMapper mapper)
     {
         _doctorRepository = doctorRepository;
+        _userRepository = userRepository;
+        _roleRepository = roleRepository;
         _mapper = mapper;
     }
 
@@ -41,6 +50,25 @@ public class DoctorService : IDoctorService
         );
 
         var created = await _doctorRepository.AddAsync(doctor);
+
+        var role = await _roleRepository.GetByNameAsync("Doctor");
+        if (role is null)
+        {
+            role = await _roleRepository.GetByNameAsync("HospitalEmployee");
+        }
+        
+        if (role is not null)
+        {
+            var user = new User(
+                dto.Email,
+                HashPassword("Pass@123"),
+                dto.FirstName,
+                dto.LastName,
+                role.Id
+            );
+            await _userRepository.AddAsync(user);
+        }
+
         return _mapper.Map<DoctorDto>(created);
     }
 
@@ -57,5 +85,19 @@ public class DoctorService : IDoctorService
     {
         var doctors = await _doctorRepository.GetBySpecializationAsync(specialization);
         return _mapper.Map<IEnumerable<DoctorDto>>(doctors);
+    }
+
+    private static string HashPassword(string password)
+    {
+        using var rng = RandomNumberGenerator.Create();
+        var salt = new byte[16];
+        rng.GetBytes(salt);
+
+        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 100000, HashAlgorithmName.SHA256, 32);
+        var hashBytes = new byte[48];
+        Array.Copy(salt, 0, hashBytes, 0, 16);
+        Array.Copy(hash, 0, hashBytes, 16, 32);
+
+        return Convert.ToBase64String(hashBytes);
     }
 }
