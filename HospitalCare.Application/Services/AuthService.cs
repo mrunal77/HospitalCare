@@ -136,6 +136,56 @@ public class AuthService : IAuthService
         return true;
     }
 
+    public async Task<UserDto?> GetUserByIdAsync(Guid id)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user is null)
+            return null;
+
+        var role = await _roleRepository.GetByIdAsync(user.RoleId);
+        return new UserDto(
+            user.Id,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            role?.Name ?? "Unknown",
+            user.IsActive,
+            user.CreatedAt
+        );
+    }
+
+    public async Task<bool> EnableUserAsync(Guid userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+            return false;
+
+        user.Activate();
+        await _userRepository.UpdateAsync(user);
+        return true;
+    }
+
+    public async Task<bool> DisableUserAsync(Guid userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+            return false;
+
+        user.Deactivate();
+        await _userRepository.UpdateAsync(user);
+        return true;
+    }
+
+    public async Task<bool> DeleteUserAsync(Guid userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+            return false;
+
+        await _userRepository.DeleteAsync(userId);
+        return true;
+    }
+
     private AuthResponseDto GenerateAuthResponse(User user, string roleName)
     {
         var token = _jwtService.GenerateToken(user.Id, user.Email, user.FirstName, user.LastName, roleName);

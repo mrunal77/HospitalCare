@@ -12,6 +12,7 @@ public static class DatabaseSeeder
     public static async Task SeedAsync(MongoDbContext context)
     {
         await SeedRolesAsync(context);
+        await SeedSpecializationsAsync(context);
         await MigrateUsersAsync(context);
         await SeedSampleDataAsync(context);
     }
@@ -38,6 +39,44 @@ public static class DatabaseSeeder
                 {
                     Console.WriteLine($"  - {role.Name}: {role.Id}");
                 }
+            }
+            catch (MongoBulkWriteException) { }
+        }
+    }
+
+    private static async Task SeedSpecializationsAsync(MongoDbContext context)
+    {
+        var specCount = await context.Specializations.CountDocumentsAsync(_ => true);
+        if (specCount == 0)
+        {
+            var specializations = new List<Specialization>
+            {
+                new() { Id = Guid.NewGuid(), Name = "Cardiology", Description = "Heart and cardiovascular system" },
+                new() { Id = Guid.NewGuid(), Name = "Neurology", Description = "Brain and nervous system" },
+                new() { Id = Guid.NewGuid(), Name = "Orthopedics", Description = "Bones, joints and muscles" },
+                new() { Id = Guid.NewGuid(), Name = "Pediatrics", Description = "Children's health" },
+                new() { Id = Guid.NewGuid(), Name = "Oncology", Description = "Cancer treatment" },
+                new() { Id = Guid.NewGuid(), Name = "Dermatology", Description = "Skin conditions" },
+                new() { Id = Guid.NewGuid(), Name = "Gastroenterology", Description = "Digestive system" },
+                new() { Id = Guid.NewGuid(), Name = "Pulmonology", Description = "Lungs and respiratory system" },
+                new() { Id = Guid.NewGuid(), Name = "Nephrology", Description = "Kidney diseases" },
+                new() { Id = Guid.NewGuid(), Name = "Endocrinology", Description = "Hormone and metabolic disorders" },
+                new() { Id = Guid.NewGuid(), Name = "Psychiatry", Description = "Mental health" },
+                new() { Id = Guid.NewGuid(), Name = "Ophthalmology", Description = "Eye care" },
+                new() { Id = Guid.NewGuid(), Name = "Otorhinolaryngology", Description = "Ear, nose and throat" },
+                new() { Id = Guid.NewGuid(), Name = "Urology", Description = "Urinary tract and male reproductive system" },
+                new() { Id = Guid.NewGuid(), Name = "Gynecology", Description = "Women's health" },
+                new() { Id = Guid.NewGuid(), Name = "Anesthesiology", Description = "Pain management and anesthesia" },
+                new() { Id = Guid.NewGuid(), Name = "Radiology", Description = "Medical imaging" },
+                new() { Id = Guid.NewGuid(), Name = "Pathology", Description = "Disease diagnosis through lab tests" },
+                new() { Id = Guid.NewGuid(), Name = "General Surgery", Description = "General surgical procedures" },
+                new() { Id = Guid.NewGuid(), Name = "Emergency Medicine", Description = "Emergency care" }
+            };
+
+            try
+            {
+                await context.Specializations.InsertManyAsync(specializations);
+                Console.WriteLine($"Seeded {specializations.Count} doctor specializations");
             }
             catch (MongoBulkWriteException) { }
         }

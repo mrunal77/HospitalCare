@@ -9,5 +9,9 @@ public interface IAuthService
     Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordDto dto);
     Task<bool> UserExistsAsync(string email);
     Task<IEnumerable<UserDto>> GetAllUsersAsync();
+    Task<UserDto?> GetUserByIdAsync(Guid id);
     Task<bool> ResetUserPasswordAsync(Guid userId, string newPassword);
+    Task<bool> EnableUserAsync(Guid userId);
+    Task<bool> DisableUserAsync(Guid userId);
+    Task<bool> DeleteUserAsync(Guid userId);
 }

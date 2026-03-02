@@ -25,6 +25,15 @@ public class RolesController : ControllerBase
         return Ok(roles);
     }
 
+    [HttpGet("active")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<RoleDto>>> GetActiveRoles()
+    {
+        var roles = await _roleService.GetAllAsync();
+        var activeRoles = roles.Where(r => r.IsActive);
+        return Ok(activeRoles);
+    }
+
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
     public async Task<ActionResult<RoleDto>> GetById(Guid id)

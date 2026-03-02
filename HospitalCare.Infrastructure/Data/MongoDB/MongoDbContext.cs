@@ -22,4 +22,14 @@ public class MongoDbContext
     public IMongoCollection<Domain.Entities.Appointment> Appointments => GetCollection<Domain.Entities.Appointment>("appointments");
     public IMongoCollection<Domain.Entities.User> Users => GetCollection<Domain.Entities.User>("users");
     public IMongoCollection<Domain.Entities.Role> Roles => GetCollection<Domain.Entities.Role>("roles");
+    public IMongoCollection<Specialization> Specializations => GetCollection<Specialization>("specializations");
+}
+
+public class Specialization
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
