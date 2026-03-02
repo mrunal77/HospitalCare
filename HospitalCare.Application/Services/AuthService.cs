@@ -3,6 +3,8 @@ using HospitalCare.Application.DTOs;
 using HospitalCare.Application.Interfaces.Services;
 using HospitalCare.Domain.Entities;
 using HospitalCare.Domain.Interfaces.Repositories;
+using Polly;
+using Polly.Retry;
 
 namespace HospitalCare.Application.Services;
 
@@ -11,26 +13,52 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IJwtService _jwtService;
+    private readonly ResiliencePipeline<AuthResponseDto?> _loginRetryPipeline;
 
     public AuthService(IUserRepository userRepository, IRoleRepository roleRepository, IJwtService jwtService)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _jwtService = jwtService;
+        _loginRetryPipeline = BuildLoginRetryPipeline();
+    }
+
+    private static ResiliencePipeline<AuthResponseDto?> BuildLoginRetryPipeline()
+    {
+        return new ResiliencePipelineBuilder<AuthResponseDto?>()
+            .AddRetry(new RetryStrategyOptions<AuthResponseDto?>
+            {
+                MaxRetryAttempts = 3,
+                Delay = TimeSpan.FromMilliseconds(500),
+                BackoffType = DelayBackoffType.Exponential,
+                ShouldHandle = new PredicateBuilder<AuthResponseDto?>()
+                    .Handle<MongoDB.Driver.MongoConnectionException>()
+                    .Handle<MongoDB.Driver.MongoCommandException>()
+                    .Handle<InvalidOperationException>(),
+                OnRetry = args =>
+                {
+                    Console.WriteLine($"Login retry attempt {args.AttemptNumber + 1} due to: {args.Outcome.Exception?.Message}");
+                    return ValueTask.CompletedTask;
+                }
+            })
+            .Build();
     }
 
     public async Task<AuthResponseDto?> LoginAsync(LoginDto dto)
     {
-        var user = await _userRepository.GetByEmailAsync(dto.Email);
-        
-        if (user is null || !user.IsActive)
-            return null;
+        return await _loginRetryPipeline.ExecuteAsync(async token =>
+        {
+            var user = await _userRepository.GetByEmailAsync(dto.Email);
+            
+            if (user is null || !user.IsActive)
+                return null;
 
-        if (!VerifyPassword(dto.Password, user.PasswordHash))
-            return null;
+            if (!VerifyPassword(dto.Password, user.PasswordHash))
+                return null;
 
-        var role = await _roleRepository.GetByIdAsync(user.RoleId);
-        return GenerateAuthResponse(user, role?.Name ?? "Unknown");
+            var role = await _roleRepository.GetByIdAsync(user.RoleId);
+            return GenerateAuthResponse(user, role?.Name ?? "Unknown");
+        });
     }
 
     public async Task<AuthResponseDto?> RegisterAsync(RegisterUserDto dto)

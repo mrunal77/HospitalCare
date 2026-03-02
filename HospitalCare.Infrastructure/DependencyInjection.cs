@@ -7,6 +7,8 @@ using HospitalCare.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using Polly;
+using Polly.Retry;
 using StackExchange.Redis;
 
 namespace HospitalCare.Infrastructure;
@@ -24,12 +26,21 @@ public static class DependencyInjection
             ?? configuration["Redis:ConnectionString"]
             ?? "localhost:6379";
 
+        var retryPolicy = GetRetryPolicy();
+
         MongoDbMappings.RegisterMappings();
 
-        services.AddSingleton<MongoDbContext>(sp => new MongoDbContext(mongoConnectionString, mongoDatabaseName));
+        services.AddSingleton<MongoDbContext>(sp => 
+        {
+            var policy = retryPolicy;
+            return policy.Execute(() => new MongoDbContext(mongoConnectionString, mongoDatabaseName));
+        });
 
-        services.AddSingleton<IConnectionMultiplexer>(sp => 
-            ConnectionMultiplexer.Connect(redisConnectionString));
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var policy = retryPolicy;
+            return policy.Execute(() => ConnectionMultiplexer.Connect(redisConnectionString));
+        });
 
         services.AddScoped<IPatientRepository, MongoPatientRepository>();
         services.AddScoped<IDoctorRepository, MongoDoctorRepository>();
@@ -39,6 +50,27 @@ public static class DependencyInjection
         services.AddScoped<IJwtService, JwtService>();
 
         return services;
+    }
+
+    private static ResiliencePipeline GetRetryPolicy()
+    {
+        return new ResiliencePipelineBuilder()
+            .AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 3,
+                Delay = TimeSpan.FromSeconds(1),
+                BackoffType = DelayBackoffType.Exponential,
+                ShouldHandle = new PredicateBuilder().Handle<MongoConnectionException>()
+                    .Handle<MongoCommandException>()
+                    .Handle<RedisConnectionException>()
+                    .Handle<RedisTimeoutException>(),
+                OnRetry = args =>
+                {
+                    Console.WriteLine($"Retry attempt {args.AttemptNumber} due to: {args.Outcome.Exception?.Message}");
+                    return ValueTask.CompletedTask;
+                }
+            })
+            .Build();
     }
 
     public static async Task InitializeDatabaseAsync(this IServiceProvider serviceProvider)
