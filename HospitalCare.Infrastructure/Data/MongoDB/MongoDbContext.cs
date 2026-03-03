@@ -20,6 +20,8 @@ public class MongoDbContext
     public IMongoCollection<Domain.Entities.Patient> Patients => GetCollection<Domain.Entities.Patient>("patients");
     public IMongoCollection<Domain.Entities.Doctor> Doctors => GetCollection<Domain.Entities.Doctor>("doctors");
     public IMongoCollection<Domain.Entities.Appointment> Appointments => GetCollection<Domain.Entities.Appointment>("appointments");
+    public IMongoCollection<Domain.Entities.Prescription> Prescriptions => GetCollection<Domain.Entities.Prescription>("prescriptions");
+    public IMongoCollection<Domain.Entities.Medicine> Medicines => GetCollection<Domain.Entities.Medicine>("medicines");
     public IMongoCollection<Domain.Entities.User> Users => GetCollection<Domain.Entities.User>("users");
     public IMongoCollection<Domain.Entities.Role> Roles => GetCollection<Domain.Entities.Role>("roles");
     public IMongoCollection<Specialization> Specializations => GetCollection<Specialization>("specializations");

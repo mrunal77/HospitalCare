@@ -45,6 +45,8 @@ public static class DependencyInjection
         services.AddScoped<IPatientRepository, MongoPatientRepository>();
         services.AddScoped<IDoctorRepository, MongoDoctorRepository>();
         services.AddScoped<IAppointmentRepository, MongoAppointmentRepository>();
+        services.AddScoped<IPrescriptionRepository, MongoPrescriptionRepository>();
+        services.AddScoped<IMedicineRepository, MongoMedicineRepository>();
         services.AddScoped<IUserRepository, MongoUserRepository>();
         services.AddScoped<IRoleRepository, MongoRoleRepository>();
         services.AddScoped<IJwtService, JwtService>();
@@ -129,6 +131,52 @@ public static class DependencyInjection
                 new CreateIndexModel<Domain.Entities.Appointment>(
                     Builders<Domain.Entities.Appointment>.IndexKeys.Ascending(a => a.AppointmentDate),
                     new CreateIndexOptions { Name = "idx_appointment_date" }
+                )
+            });
+        }
+        catch (MongoCommandException) { }
+
+        try
+        {
+            await context.Prescriptions.Indexes.DropAllAsync();
+            await context.Prescriptions.Indexes.CreateManyAsync(new[]
+            {
+                new CreateIndexModel<Domain.Entities.Prescription>(
+                    Builders<Domain.Entities.Prescription>.IndexKeys.Ascending(p => p.PatientId),
+                    new CreateIndexOptions { Name = "idx_prescription_patient" }
+                ),
+                new CreateIndexModel<Domain.Entities.Prescription>(
+                    Builders<Domain.Entities.Prescription>.IndexKeys.Ascending(p => p.DoctorId),
+                    new CreateIndexOptions { Name = "idx_prescription_doctor" }
+                ),
+                new CreateIndexModel<Domain.Entities.Prescription>(
+                    Builders<Domain.Entities.Prescription>.IndexKeys.Ascending(p => p.AppointmentId),
+                    new CreateIndexOptions { Name = "idx_prescription_appointment" }
+                )
+            });
+        }
+        catch (MongoCommandException) { }
+
+        try
+        {
+            await context.Medicines.Indexes.DropAllAsync();
+            await context.Medicines.Indexes.CreateManyAsync(new[]
+            {
+                new CreateIndexModel<Domain.Entities.Medicine>(
+                    Builders<Domain.Entities.Medicine>.IndexKeys.Ascending(m => m.ProductName),
+                    new CreateIndexOptions { Name = "idx_medicine_name" }
+                ),
+                new CreateIndexModel<Domain.Entities.Medicine>(
+                    Builders<Domain.Entities.Medicine>.IndexKeys.Ascending(m => m.SubCategory),
+                    new CreateIndexOptions { Name = "idx_medicine_category" }
+                ),
+                new CreateIndexModel<Domain.Entities.Medicine>(
+                    Builders<Domain.Entities.Medicine>.IndexKeys.Ascending(m => m.SaltComposition),
+                    new CreateIndexOptions { Name = "idx_medicine_salt" }
+                ),
+                new CreateIndexModel<Domain.Entities.Medicine>(
+                    Builders<Domain.Entities.Medicine>.IndexKeys.Ascending(m => m.Manufacturer),
+                    new CreateIndexOptions { Name = "idx_medicine_manufacturer" }
                 )
             });
         }
