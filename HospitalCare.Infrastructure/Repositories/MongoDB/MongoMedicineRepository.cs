@@ -28,6 +28,20 @@ public class MongoMedicineRepository : MongoRepository<Medicine>, IMedicineRepos
         return await Collection.Find(filter).Sort(sort).ToListAsync();
     }
 
+    public async Task<IEnumerable<Medicine>> SearchFuzzyAsync(string searchTerm, int limit = 20)
+    {
+        var search = searchTerm.Trim();
+        
+        var filter = Builders<Medicine>.Filter.Or(
+            Builders<Medicine>.Filter.Regex(m => m.ProductName, new BsonRegularExpression(search, "i")),
+            Builders<Medicine>.Filter.Regex(m => m.SaltComposition, new BsonRegularExpression(search, "i")),
+            Builders<Medicine>.Filter.Regex(m => m.Manufacturer, new BsonRegularExpression(search, "i"))
+        );
+
+        var sort = Builders<Medicine>.Sort.Ascending(m => m.ProductName);
+        return await Collection.Find(filter).Sort(sort).Limit(limit).ToListAsync();
+    }
+
     public async Task<IEnumerable<string>> GetAllSubCategoriesAsync()
     {
         var filter = Builders<Medicine>.Filter.Empty;

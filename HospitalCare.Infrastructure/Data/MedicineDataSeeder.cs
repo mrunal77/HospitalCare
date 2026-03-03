@@ -1,13 +1,15 @@
 using HospitalCare.Domain.Entities;
 using HospitalCare.Infrastructure.Data.MongoDB;
 using MongoDB.Driver;
+using System.IO.Compression;
 
 namespace HospitalCare.Infrastructure.Data;
 
 public static class MedicineDataSeeder
 {
     private const int BatchSize = 1000;
-    private const string CsvPath = "archive/medicine_data.csv";
+    private const string ArchivePath = "archive/medicine_data.zip";
+    private const string CsvFileName = "medicine_data.csv";
 
     public static async Task SeedMedicinesAsync(MongoDbContext context)
     {
@@ -18,29 +20,16 @@ public static class MedicineDataSeeder
             return;
         }
 
-        var csvFullPath = Path.Combine(AppContext.BaseDirectory, CsvPath);
-        if (!File.Exists(csvFullPath))
+        var extractedCsvPath = await ExtractZipAndGetCsvPath();
+        if (string.IsNullOrEmpty(extractedCsvPath) || !File.Exists(extractedCsvPath))
         {
-            csvFullPath = Path.Combine(Directory.GetCurrentDirectory(), CsvPath);
-        }
-        if (!File.Exists(csvFullPath))
-        {
-            csvFullPath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.FullName ?? "", CsvPath);
-        }
-        if (!File.Exists(csvFullPath))
-        {
-            csvFullPath = "/home/mrunal/Projects/HospitalCare/archive/medicine_data.csv";
-        }
-
-        if (!File.Exists(csvFullPath))
-        {
-            Console.WriteLine($"Medicine CSV file not found at: {csvFullPath}");
+            Console.WriteLine($"Medicine CSV file not found after extraction.");
             return;
         }
 
-        Console.WriteLine($"Starting medicine data import from: {csvFullPath}");
+        Console.WriteLine($"Starting medicine data import from: {extractedCsvPath}");
 
-        var lines = await File.ReadAllLinesAsync(csvFullPath);
+        var lines = await File.ReadAllLinesAsync(extractedCsvPath);
         var totalRecords = lines.Length - 1;
         Console.WriteLine($"Found {totalRecords} medicine records to import");
 
@@ -83,6 +72,59 @@ public static class MedicineDataSeeder
 
         var elapsed = DateTime.Now - startTime;
         Console.WriteLine($"Completed importing {importedCount} medicines in {elapsed.TotalSeconds:F2} seconds");
+    }
+
+    private static async Task<string?> ExtractZipAndGetCsvPath()
+    {
+        var zipFullPath = Path.Combine(AppContext.BaseDirectory, ArchivePath);
+        if (!File.Exists(zipFullPath))
+        {
+            zipFullPath = Path.Combine(Directory.GetCurrentDirectory(), ArchivePath);
+        }
+        if (!File.Exists(zipFullPath))
+        {
+            zipFullPath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.FullName ?? "", ArchivePath);
+        }
+        if (!File.Exists(zipFullPath))
+        {
+            zipFullPath = "/home/mrunal/Projects/HospitalCare/archive/medicine_data.zip";
+        }
+
+        if (!File.Exists(zipFullPath))
+        {
+            Console.WriteLine($"Medicine ZIP file not found at: {zipFullPath}");
+            return null;
+        }
+
+        Console.WriteLine($"Extracting ZIP file: {zipFullPath}");
+
+        var extractPath = Path.Combine(Path.GetDirectoryName(zipFullPath) ?? "", "extracted");
+        Directory.CreateDirectory(extractPath);
+
+        try
+        {
+            ZipFile.ExtractToDirectory(zipFullPath, extractPath, overwriteFiles: true);
+        }
+        catch (InvalidDataException)
+        {
+            var tempExtractPath = Path.Combine(Path.GetTempPath(), $"medicine_extract_{Guid.NewGuid()}");
+            Directory.CreateDirectory(tempExtractPath);
+            ZipFile.ExtractToDirectory(zipFullPath, tempExtractPath, overwriteFiles: true);
+            extractPath = tempExtractPath;
+        }
+
+        var csvPath = Path.Combine(extractPath, CsvFileName);
+        if (!File.Exists(csvPath))
+        {
+            var csvFiles = Directory.GetFiles(extractPath, "*.csv", SearchOption.AllDirectories);
+            if (csvFiles.Length > 0)
+            {
+                csvPath = csvFiles[0];
+            }
+        }
+
+        Console.WriteLine($"CSV extracted to: {csvPath}");
+        return csvPath;
     }
 
     private static Medicine? ParseCsvLine(string line)
