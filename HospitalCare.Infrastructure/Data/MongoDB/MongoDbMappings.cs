@@ -112,6 +112,61 @@ public static class MongoDbMappings
                 });
             }
 
+            if (!BsonClassMap.IsClassMapRegistered(typeof(Prescription)))
+            {
+                BsonClassMap.RegisterClassMap<Prescription>(cm =>
+                {
+                    cm.AutoMap();
+                    cm.MapProperty(p => p.AppointmentId)
+                        .SetElementName("appointmentId")
+                        .SetSerializer(new GuidSerializer(GuidRepresentation.Standard));
+                    cm.MapProperty(p => p.DoctorId)
+                        .SetElementName("doctorId")
+                        .SetSerializer(new GuidSerializer(GuidRepresentation.Standard));
+                    cm.MapProperty(p => p.PatientId)
+                        .SetElementName("patientId")
+                        .SetSerializer(new GuidSerializer(GuidRepresentation.Standard));
+                    cm.MapProperty(p => p.Diagnosis).SetElementName("diagnosis");
+                    cm.MapProperty(p => p.Medicines).SetElementName("medicines");
+                    cm.MapProperty(p => p.Notes).SetElementName("notes");
+                    cm.MapProperty(p => p.PrescriptionDate).SetElementName("prescriptionDate");
+                });
+            }
+
+            if (!BsonClassMap.IsClassMapRegistered(typeof(MedicineDetail)))
+            {
+                BsonClassMap.RegisterClassMap<MedicineDetail>(cm =>
+                {
+                    cm.AutoMap();
+                    cm.MapProperty(m => m.Id)
+                        .SetElementName("id")
+                        .SetSerializer(new GuidSerializer(GuidRepresentation.Standard));
+                    cm.MapProperty(m => m.Name).SetElementName("name");
+                    cm.MapProperty(m => m.Dosage).SetElementName("dosage");
+                    cm.MapProperty(m => m.Amount).SetElementName("amount");
+                    cm.MapProperty(m => m.Routine).SetElementName("routine");
+                    cm.MapProperty(m => m.Instructions).SetElementName("instructions");
+                    cm.MapProperty(m => m.DurationDays).SetElementName("durationDays");
+                });
+            }
+
+            if (!BsonClassMap.IsClassMapRegistered(typeof(Medicine)))
+            {
+                BsonClassMap.RegisterClassMap<Medicine>(cm =>
+                {
+                    cm.AutoMap();
+                    cm.MapProperty(m => m.SubCategory).SetElementName("subCategory");
+                    cm.MapProperty(m => m.ProductName).SetElementName("productName");
+                    cm.MapProperty(m => m.SaltComposition).SetElementName("saltComposition");
+                    cm.MapProperty(m => m.Price).SetElementName("price");
+                    cm.MapProperty(m => m.Manufacturer).SetElementName("manufacturer");
+                    cm.MapProperty(m => m.Description).SetElementName("description");
+                    cm.MapProperty(m => m.SideEffects).SetElementName("sideEffects");
+                    cm.MapProperty(m => m.DrugInteractions).SetElementName("drugInteractions");
+                    cm.MapProperty(m => m.IsActive).SetElementName("isActive");
+                });
+            }
+
             _isInitialized = true;
         }
     }

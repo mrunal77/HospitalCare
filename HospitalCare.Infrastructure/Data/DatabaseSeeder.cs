@@ -15,6 +15,7 @@ public static class DatabaseSeeder
         await SeedSpecializationsAsync(context);
         await MigrateUsersAsync(context);
         await SeedSampleDataAsync(context);
+        await MedicineDataSeeder.SeedMedicinesAsync(context);
     }
 
     private static async Task SeedRolesAsync(MongoDbContext context)
