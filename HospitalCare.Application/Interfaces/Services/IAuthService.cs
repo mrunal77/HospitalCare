@@ -14,4 +14,5 @@ public interface IAuthService
     Task<bool> EnableUserAsync(Guid userId);
     Task<bool> DisableUserAsync(Guid userId);
     Task<bool> DeleteUserAsync(Guid userId);
+    Task<UserDto?> UpdateUserRoleAsync(Guid userId, Guid roleId);
 }

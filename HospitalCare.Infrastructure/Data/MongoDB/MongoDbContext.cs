@@ -24,6 +24,9 @@ public class MongoDbContext
     public IMongoCollection<Domain.Entities.Medicine> Medicines => GetCollection<Domain.Entities.Medicine>("medicines");
     public IMongoCollection<Domain.Entities.User> Users => GetCollection<Domain.Entities.User>("users");
     public IMongoCollection<Domain.Entities.Role> Roles => GetCollection<Domain.Entities.Role>("roles");
+    public IMongoCollection<Domain.Entities.Claim> Claims => GetCollection<Domain.Entities.Claim>("claims");
+    public IMongoCollection<Domain.Entities.UserClaim> UserClaims => GetCollection<Domain.Entities.UserClaim>("userclaims");
+    public IMongoCollection<Domain.Entities.RoleClaim> RoleClaims => GetCollection<Domain.Entities.RoleClaim>("roleclaims");
     public IMongoCollection<Specialization> Specializations => GetCollection<Specialization>("specializations");
 }
 

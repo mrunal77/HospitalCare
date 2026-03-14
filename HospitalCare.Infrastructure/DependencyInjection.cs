@@ -49,6 +49,9 @@ public static class DependencyInjection
         services.AddScoped<IMedicineRepository, MongoMedicineRepository>();
         services.AddScoped<IUserRepository, MongoUserRepository>();
         services.AddScoped<IRoleRepository, MongoRoleRepository>();
+        services.AddScoped<IClaimRepository, MongoClaimRepository>();
+        services.AddScoped<IUserClaimRepository, MongoUserClaimRepository>();
+        services.AddScoped<IRoleClaimRepository, MongoRoleClaimRepository>();
         services.AddScoped<IJwtService, JwtService>();
 
         return services;

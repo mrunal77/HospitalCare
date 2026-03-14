@@ -77,4 +77,13 @@ public class UsersController : ControllerBase
             return NotFound(new { message = "User not found" });
         return Ok(new { message = "Password reset successfully" });
     }
+
+    [HttpPut("{id:guid}/role")]
+    public async Task<IActionResult> UpdateUserRole(Guid id, [FromBody] UpdateUserRoleDto dto)
+    {
+        var result = await _authService.UpdateUserRoleAsync(id, dto.RoleId);
+        if (result is null)
+            return NotFound(new { message = "User or Role not found" });
+        return Ok(result);
+    }
 }

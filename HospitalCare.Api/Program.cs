@@ -97,6 +97,18 @@ try
         options.AddPolicy("DoctorAccess", policy => policy.RequireRole("Doctor", "Admin"));
         options.AddPolicy("EmployeeAccess", policy => policy.RequireRole("HospitalEmployee", "Admin"));
         options.AddPolicy("PatientAccess", policy => policy.RequireRole("Doctor", "HospitalEmployee", "Admin"));
+
+        options.AddPolicy("manage_claims", policy => policy.RequireClaim("claim", "manage_claims"));
+        options.AddPolicy("manage_roles", policy => policy.RequireClaim("claim", "manage_roles"));
+        options.AddPolicy("manage_users", policy => policy.RequireClaim("claim", "manage_users"));
+        options.AddPolicy("view_doctors", policy => policy.RequireClaim("claim", "view_doctors"));
+        options.AddPolicy("add_doctor", policy => policy.RequireClaim("claim", "add_doctor"));
+        options.AddPolicy("update_doctor", policy => policy.RequireClaim("claim", "update_doctor"));
+        options.AddPolicy("delete_doctor", policy => policy.RequireClaim("claim", "delete_doctor"));
+        options.AddPolicy("view_patients", policy => policy.RequireClaim("claim", "view_patients"));
+        options.AddPolicy("add_patient", policy => policy.RequireClaim("claim", "add_patient"));
+        options.AddPolicy("update_patient", policy => policy.RequireClaim("claim", "update_patient"));
+        options.AddPolicy("delete_patient", policy => policy.RequireClaim("claim", "delete_patient"));
     });
 
     builder.Services.AddApplication();

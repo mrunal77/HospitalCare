@@ -12,13 +12,22 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
+    private readonly IRoleClaimRepository _roleClaimRepository;
+    private readonly IUserClaimRepository _userClaimRepository;
     private readonly IJwtService _jwtService;
     private readonly ResiliencePipeline<AuthResponseDto?> _loginRetryPipeline;
 
-    public AuthService(IUserRepository userRepository, IRoleRepository roleRepository, IJwtService jwtService)
+    public AuthService(
+        IUserRepository userRepository, 
+        IRoleRepository roleRepository, 
+        IRoleClaimRepository roleClaimRepository,
+        IUserClaimRepository userClaimRepository,
+        IJwtService jwtService)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
+        _roleClaimRepository = roleClaimRepository;
+        _userClaimRepository = userClaimRepository;
         _jwtService = jwtService;
         _loginRetryPipeline = BuildLoginRetryPipeline();
     }
@@ -60,7 +69,7 @@ public class AuthService : IAuthService
                 return (null, false);
 
             var role = await _roleRepository.GetByIdAsync(user.RoleId);
-            return (GenerateAuthResponse(user, role?.Name ?? "Unknown"), false);
+            return (await GenerateAuthResponse(user, role?.Name ?? "Unknown"), false);
         }
         catch (MongoDB.Driver.MongoConnectionException)
         {
@@ -85,7 +94,7 @@ public class AuthService : IAuthService
         var user = new User(dto.Email, passwordHash, dto.FirstName, dto.LastName, roleId);
 
         var createdUser = await _userRepository.AddAsync(user);
-        return GenerateAuthResponse(createdUser, role?.Name ?? "HospitalEmployee");
+        return await GenerateAuthResponse(createdUser, role?.Name ?? "HospitalEmployee");
     }
 
     public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordDto dto)
@@ -197,9 +206,38 @@ public class AuthService : IAuthService
         return true;
     }
 
-    private AuthResponseDto GenerateAuthResponse(User user, string roleName)
+    public async Task<UserDto?> UpdateUserRoleAsync(Guid userId, Guid roleId)
     {
-        var token = _jwtService.GenerateToken(user.Id, user.Email, user.FirstName, user.LastName, roleName);
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+            return null;
+
+        var role = await _roleRepository.GetByIdAsync(roleId);
+        if (role is null)
+            return null;
+
+        user.AssignRole(roleId);
+        await _userRepository.UpdateAsync(user);
+
+        return new UserDto(
+            user.Id,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            role.Name,
+            user.IsActive,
+            user.CreatedAt
+        );
+    }
+
+    private async Task<AuthResponseDto> GenerateAuthResponse(User user, string roleName)
+    {
+        var roleClaims = await _roleClaimRepository.GetClaimsByRoleIdAsync(user.RoleId);
+        var userClaims = await _userClaimRepository.GetClaimsByUserIdAsync(user.Id);
+
+        var allClaims = roleClaims.Union(userClaims).Select(c => c.Name).Distinct();
+        
+        var token = _jwtService.GenerateToken(user.Id, user.Email, user.FirstName, user.LastName, roleName, allClaims);
         return new AuthResponseDto(
             token,
             user.Email,

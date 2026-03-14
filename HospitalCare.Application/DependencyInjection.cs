@@ -18,6 +18,9 @@ public static class DependencyInjection
         services.AddScoped<IMedicineService, MedicineService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<IClaimService, ClaimService>();
+        services.AddScoped<IUserClaimService, UserClaimService>();
+        services.AddScoped<IRoleClaimService, RoleClaimService>();
 
         services.AddValidatorsFromAssemblyContaining<UpdateProfileValidator>();
         services.AddScoped<IValidationService, ValidationService>();

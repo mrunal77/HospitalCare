@@ -12,6 +12,8 @@ public static class DatabaseSeeder
     public static async Task SeedAsync(MongoDbContext context)
     {
         await SeedRolesAsync(context);
+        await SeedClaimsAsync(context);
+        await SeedRoleClaimsAsync(context);
         await SeedSpecializationsAsync(context);
         await MigrateUsersAsync(context);
         await SeedSampleDataAsync(context);
@@ -42,6 +44,107 @@ public static class DatabaseSeeder
                 }
             }
             catch (MongoBulkWriteException) { }
+        }
+    }
+
+    private static async Task SeedClaimsAsync(MongoDbContext context)
+    {
+        var claimCount = await context.Claims.CountDocumentsAsync(_ => true);
+        if (claimCount == 0)
+        {
+            var claims = new List<Claim>
+            {
+                new("manage_claims", "Manage all claims", "Administration"),
+                new("manage_roles", "Manage all roles", "Administration"),
+                new("manage_users", "Manage all users", "Administration"),
+                new("view_doctors", "View doctor information", "Doctor"),
+                new("add_doctor", "Add new doctors", "Doctor"),
+                new("update_doctor", "Update doctor information", "Doctor"),
+                new("delete_doctor", "Delete doctors", "Doctor"),
+                new("view_patients", "View patient information", "Patient"),
+                new("add_patient", "Add new patients", "Patient"),
+                new("update_patient", "Update patient information", "Patient"),
+                new("delete_patient", "Delete patients", "Patient"),
+                new("view_appointments", "View appointments", "Appointment"),
+                new("add_appointment", "Add new appointments", "Appointment"),
+                new("update_appointment", "Update appointments", "Appointment"),
+                new("delete_appointment", "Delete appointments", "Appointment"),
+                new("view_prescriptions", "View prescriptions", "Prescription"),
+                new("add_prescription", "Add new prescriptions", "Prescription"),
+                new("update_prescription", "Update prescriptions", "Prescription"),
+                new("delete_prescription", "Delete prescriptions", "Prescription"),
+                new("view_medicines", "View medicines", "Medicine"),
+                new("manage_medicines", "Manage medicines", "Medicine"),
+                new("full_access", "Full system access", "System")
+            };
+
+            try
+            {
+                await context.Claims.InsertManyAsync(claims);
+                Console.WriteLine($"Seeded {claims.Count} default claims");
+            }
+            catch (MongoBulkWriteException) { }
+        }
+    }
+
+    private static async Task SeedRoleClaimsAsync(MongoDbContext context)
+    {
+        var roleClaimCount = await context.RoleClaims.CountDocumentsAsync(_ => true);
+        if (roleClaimCount == 0)
+        {
+            var adminRole = await context.Roles.Find(r => r.Name == "Admin").FirstOrDefaultAsync();
+            var doctorRole = await context.Roles.Find(r => r.Name == "Doctor").FirstOrDefaultAsync();
+            var employeeRole = await context.Roles.Find(r => r.Name == "HospitalEmployee").FirstOrDefaultAsync();
+            var nurseRole = await context.Roles.Find(r => r.Name == "Nurse").FirstOrDefaultAsync();
+            var receptionistRole = await context.Roles.Find(r => r.Name == "Receptionist").FirstOrDefaultAsync();
+
+            var allClaims = await context.Claims.Find(_ => true).ToListAsync();
+
+            var roleClaims = new List<RoleClaim>();
+
+            if (adminRole != null)
+            {
+                var adminClaims = allClaims.Select(c => new RoleClaim(adminRole.Id, c.Id));
+                roleClaims.AddRange(adminClaims);
+            }
+
+            if (doctorRole != null)
+            {
+                var doctorClaimNames = new[] { "view_doctors", "view_patients", "view_appointments", "view_prescriptions", "add_prescription", "update_prescription" };
+                var doctorClaims = allClaims.Where(c => doctorClaimNames.Contains(c.Name)).Select(c => new RoleClaim(doctorRole.Id, c.Id));
+                roleClaims.AddRange(doctorClaims);
+            }
+
+            if (employeeRole != null)
+            {
+                var employeeClaimNames = new[] { "view_patients", "add_patient", "update_patient", "view_appointments", "add_appointment", "update_appointment" };
+                var employeeClaims = allClaims.Where(c => employeeClaimNames.Contains(c.Name)).Select(c => new RoleClaim(employeeRole.Id, c.Id));
+                roleClaims.AddRange(employeeClaims);
+            }
+
+            if (nurseRole != null)
+            {
+                var nurseClaimNames = new[] { "view_patients", "view_appointments", "view_prescriptions" };
+                var nurseClaims = allClaims.Where(c => nurseClaimNames.Contains(c.Name)).Select(c => new RoleClaim(nurseRole.Id, c.Id));
+                roleClaims.AddRange(nurseClaims);
+            }
+
+            if (receptionistRole != null)
+            {
+                var receptionistClaimNames = new[] { "view_appointments", "add_appointment", "update_appointment" };
+                var receptionistClaims = allClaims.Where(c => receptionistClaimNames.Contains(c.Name)).Select(c => new RoleClaim(receptionistRole.Id, c.Id));
+                roleClaims.AddRange(receptionistClaims);
+            }
+
+            if (roleClaims.Any())
+            {
+                try
+                {
+                    await context.RoleClaims.InsertManyAsync(roleClaims);
+                    Console.WriteLine($"Seeded {roleClaims.Count} role-claim mappings");
+                }
+                catch (MongoBulkWriteException) { }
+            }
         }
     }
 

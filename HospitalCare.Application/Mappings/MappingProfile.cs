@@ -23,5 +23,12 @@ public class MappingProfile : Profile
         CreateMap<Appointment, AppointmentDto>()
             .ForMember(dest => dest.PatientName, opt => opt.Ignore())
             .ForMember(dest => dest.DoctorName, opt => opt.Ignore());
+
+        CreateMap<Claim, ClaimDto>();
+        CreateMap<CreateClaimDto, Claim>()
+            .ConstructUsing(dto => new Claim(dto.Name, dto.Description, dto.Category));
+
+        CreateMap<UserClaim, UserClaimDto>();
+        CreateMap<RoleClaim, RoleClaimDto>();
     }
 }

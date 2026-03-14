@@ -24,12 +24,12 @@ public class JwtService : IJwtService
         _expirationMinutes = int.Parse(configuration["Jwt:ExpirationMinutes"] ?? "60");
     }
 
-    public string GenerateToken(Guid userId, string email, string firstName, string lastName, string role)
+    public string GenerateToken(Guid userId, string email, string firstName, string lastName, string role, IEnumerable<string>? claims = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claimList = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
@@ -41,10 +41,18 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Role, role)
         };
 
+        if (claims != null)
+        {
+            foreach (var c in claims)
+            {
+                claimList.Add(new Claim("claim", c));
+            }
+        }
+
         var token = new JwtSecurityToken(
             issuer: _issuer,
             audience: _audience,
-            claims: claims,
+            claims: claimList,
             expires: DateTime.UtcNow.AddMinutes(_expirationMinutes),
             signingCredentials: credentials
         );
