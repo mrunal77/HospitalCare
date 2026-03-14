@@ -17,6 +17,7 @@ public static class DatabaseSeeder
         await SeedSpecializationsAsync(context);
         await MigrateUsersAsync(context);
         await SeedSampleDataAsync(context);
+        await SeedDoctorUsersAsync(context);
         await MedicineDataSeeder.SeedMedicinesAsync(context);
     }
 
@@ -308,6 +309,65 @@ public static class DatabaseSeeder
             }
             catch (MongoBulkWriteException) { }
         }
+    }
+
+    private static async Task SeedDoctorUsersAsync(MongoDbContext context)
+    {
+        var doctorRole = await context.Roles.Find(r => r.Name == "Doctor").FirstOrDefaultAsync();
+        if (doctorRole is null)
+        {
+            Console.WriteLine("Doctor role not found, skipping doctor user seeding");
+            return;
+        }
+
+        var doctors = await context.Doctors.Find(_ => true).ToListAsync();
+        if (doctors.Count == 0)
+        {
+            Console.WriteLine("No doctors found, skipping doctor user seeding");
+            return;
+        }
+
+        var defaultClaimNames = new[] { "view_doctors", "view_patients", "view_appointments", "view_prescriptions", "add_prescription", "update_prescription" };
+        var defaultClaims = await context.Claims.Find(c => defaultClaimNames.Contains(c.Name)).ToListAsync();
+
+        foreach (var doctor in doctors)
+        {
+            var existingUser = await context.Users.Find(u => u.Email == doctor.Email).FirstOrDefaultAsync();
+            
+            if (existingUser is null)
+            {
+                var user = new User(
+                    doctor.Email,
+                    HashPassword("Doctor@123"),
+                    doctor.FirstName,
+                    doctor.LastName,
+                    doctorRole.Id
+                );
+
+                await context.Users.InsertOneAsync(user);
+                Console.WriteLine($"Created user for doctor: {doctor.Email}");
+
+                if (defaultClaims.Count > 0)
+                {
+                    var userClaims = defaultClaims.Select(c => new UserClaim(user.Id, c.Id)).ToList();
+                    try
+                    {
+                        await context.UserClaims.InsertManyAsync(userClaims);
+                        Console.WriteLine($"  Added {userClaims.Count} default claims for {doctor.Email}");
+                    }
+                    catch (MongoBulkWriteException) { }
+                }
+            }
+            else
+            {
+                existingUser.AssignRole(doctorRole.Id);
+                await context.Users.ReplaceOneAsync(u => u.Id == existingUser.Id, existingUser);
+                Console.WriteLine($"Updated role for existing doctor user: {doctor.Email}");
+            }
+        }
+
+        var doctorUserCount = await context.Users.CountDocumentsAsync(u => u.RoleId == doctorRole.Id);
+        Console.WriteLine($"Seeded {doctorUserCount} doctor users with default password 'Doctor@123' and default claims");
     }
 
     private static string HashPassword(string password)
